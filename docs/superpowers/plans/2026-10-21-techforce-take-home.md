@@ -24,7 +24,7 @@
 
 ## Review Focus
 
-1. Re-importing the same file → `imported 0, merged 40, rejected 10`; no duplicated rows (Task 5 test `test_reimport_is_idempotent`).
+1. Re-importing the same file → `imported 0, merged 43, rejected 10`; no duplicated rows (Task 5 test `test_reimport_is_idempotent`).
 2. Search containing `%` or `_` is literal, not a wildcard (Task 6 `test_search_wildcards_are_literal`).
 3. Pooled connection must not leak one recruiter's scope into the next request (Task 4 `test_scope_does_not_leak_across_transactions`, Task 6 `test_dana_then_caleb_same_client`).
 4. Missing `X-Recruiter-Id` header → 403, not FastAPI's default 422 (Task 6 `test_missing_header_403`).

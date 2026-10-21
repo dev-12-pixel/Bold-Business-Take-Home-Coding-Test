@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api import imports
 from app.config import get_settings
 from app.db import migrate, owner_engine
 from app.recruiters import seed_recruiters
@@ -18,6 +19,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="TechForce", lifespan=lifespan)
+
+    app.include_router(imports.router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
