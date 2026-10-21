@@ -99,4 +99,6 @@ unknown recruiter → 403, full-file report equals §3 expected counts.
 - 2026-10-21 — Implementation plan written: `docs/superpowers/plans/2026-10-21-techforce-take-home.md` (Tasks 0–8; proposes D20–D27, added in Task 0).
 - 2026-10-21 — Task 0: `.gitignore`, decisions D20–D27 recorded, source CSVs + plan committed. Work happens on `main` (empty repo, user asked for commits there). User rule: no Co-Authored-By/AI trailer in commit messages.
 - 2026-10-21 — Task 1: docker-compose (db + api), `db/init/01-roles.sh` creates `techforce_app` (NOSUPERUSER, NOBYPASSRLS) and `techforce_test` DB; FastAPI skeleton with `/healthz`; `pytest.ini` sets `pythonpath = .` and silences one third-party starlette/anyio DeprecationWarning. Tests: `docker compose run --rm api pytest -q` → 1 passed.
+- 2026-10-21 — D28: source CSVs and brief PDF git-ignored and untracked (user). They remain in commit 6e712a3's history.
+- 2026-10-21 — Task 2: `app/importer/normalize.py` field normalizers (D6–D13). Salary accepts only well-formed thousands grouping (`1,2,3` → null + warning) and a whole-number result (`85.5` → null + warning). Email returns email-validator's normalized form of the lowercased input. → 56 passed.
 
