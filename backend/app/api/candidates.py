@@ -8,7 +8,7 @@ from datetime import date
 from enum import Enum
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy import Select, func, or_, select
 
@@ -19,6 +19,11 @@ from app.recruiters import Recruiter
 from app.tables import candidates
 
 router = APIRouter()
+
+# Hostile input is a 422, never a 500: Postgres rejects NUL in text, and a huge
+# page would overflow the bigint OFFSET.
+NO_NUL = r"^[^\x00]*$"
+MAX_PAGE = 100_000
 
 Status = Enum("Status", {s: s for s in STATUSES}, type=str)
 
@@ -68,9 +73,9 @@ def _filtered(query: Select, search: str | None, status: Status | None) -> Selec
 @router.get("/api/v1/candidates", response_model=CandidatePage)
 def list_candidates(
     recruiter: Annotated[Recruiter, Depends(current_recruiter)],
-    search: str | None = None,
+    search: Annotated[str | None, Query(max_length=200, pattern=NO_NUL)] = None,
     status: Status | None = None,
-    page: Annotated[int, Query(ge=1)] = 1,
+    page: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
 ) -> CandidatePage:
     with scoped(recruiter.recruiter_id) as conn:
@@ -89,7 +94,8 @@ def list_candidates(
 
 @router.get("/api/v1/candidates/{candidate_id}", response_model=CandidateOut)
 def get_candidate(
-    candidate_id: str, recruiter: Annotated[Recruiter, Depends(current_recruiter)]
+    candidate_id: Annotated[str, Path(pattern=NO_NUL)],
+    recruiter: Annotated[Recruiter, Depends(current_recruiter)],
 ) -> CandidateOut:
     with scoped(recruiter.recruiter_id) as conn:
         row = (

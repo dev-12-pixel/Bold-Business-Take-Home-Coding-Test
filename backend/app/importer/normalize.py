@@ -13,6 +13,7 @@ from email_validator import EmailNotValidError, validate_email
 
 REGIONS = frozenset({"US-MW", "US-NE", "US-SE", "US-W", "PH-MNL", "CO-BOG"})
 STATUSES = ("active", "screening", "interviewing", "withdrawn", "on_hold")
+MAX_SALARY = 2_147_483_647  # Postgres integer column
 
 # Region codes with the hyphen removed, for inputs like "USW" (D8). Each key
 # maps to exactly one canonical code, so this is a lookup, not a fuzzy match.
@@ -94,7 +95,7 @@ def parse_salary(raw: str) -> tuple[int | None, str | None]:
         amount = Decimal(match["number"].replace(",", "") + (match["fraction"] or ""))
         if match["k"]:
             amount *= 1000
-        if amount == amount.to_integral_value():
+        if amount == amount.to_integral_value() and amount <= MAX_SALARY:
             return int(amount), None
     return None, f"salary '{raw}' is not numeric; stored as null"
 

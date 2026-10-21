@@ -140,3 +140,19 @@ def test_non_utf8_raises():
 def test_empty_file_raises():
     with pytest.raises(FileError, match="^file is empty$"):
         parse_csv(b"")
+
+
+def test_stray_quote_is_a_file_error_not_swallowed_rows():
+    data = "\r\n".join([HEADER, VALID.rstrip(",") + ',"oops', VALID.replace("C-9001", "C-9002"), ""])
+    with pytest.raises(FileError, match="^malformed CSV"):
+        parse_csv(data.encode())
+
+
+def test_oversized_field_is_a_file_error():
+    with pytest.raises(FileError, match="^malformed CSV"):
+        parse_csv(f"{HEADER}\n{VALID}{'x' * 200_000}\n".encode())
+
+
+def test_nul_byte_is_a_file_error():
+    with pytest.raises(FileError, match="^file contains NUL bytes$"):
+        parse_csv(f"{HEADER}\n{VALID}a\x00b\n".encode())

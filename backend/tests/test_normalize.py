@@ -191,3 +191,12 @@ def test_clean_optional_keeps_text_verbatim():
     assert clean_optional("  ") is None
     assert clean_optional(" ' OR '1'='1 ") == "' OR '1'='1"
     assert clean_optional("Round 1 passed.\nRound 2 pending.") == "Round 1 passed.\nRound 2 pending."
+
+
+@pytest.mark.parametrize("raw", ["99999999999", "3000000k", "$2,147,483,648"])
+def test_salary_beyond_integer_column_is_null_with_warning(raw):
+    assert parse_salary(raw) == (None, f"salary '{raw}' is not numeric; stored as null")
+
+
+def test_salary_at_integer_max_is_kept():
+    assert parse_salary("2147483647") == (2147483647, None)

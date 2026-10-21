@@ -75,13 +75,21 @@ def parse_csv(data: bytes) -> list[RawRow]:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         raise FileError("file is not valid UTF-8") from None
-    records = csv.reader(io.StringIO(text, newline=""))
-    header = next(records, None)
-    if header is None:
-        raise FileError("file is empty")
-    if tuple(h.strip() for h in header) != EXPECTED_HEADER:
-        raise FileError(f"unexpected header: expected {','.join(EXPECTED_HEADER)}")
-    return [RawRow(row, fields) for row, fields in enumerate(records, start=2) if fields]
+    # Postgres text cannot hold NUL, and no legitimate CSV cell needs one.
+    if "\x00" in text:
+        raise FileError("file contains NUL bytes")
+    # strict: an unbalanced quote is an error instead of silently swallowing
+    # the following rows into one cell.
+    records = csv.reader(io.StringIO(text, newline=""), strict=True)
+    try:
+        header = next(records, None)
+        if header is None:
+            raise FileError("file is empty")
+        if tuple(h.strip() for h in header) != EXPECTED_HEADER:
+            raise FileError(f"unexpected header: expected {','.join(EXPECTED_HEADER)}")
+        return [RawRow(row, fields) for row, fields in enumerate(records, start=2) if fields]
+    except csv.Error as exc:
+        raise FileError(f"malformed CSV near line {records.line_num}: {exc}") from None
 
 
 def _validate(raw: RawRow) -> tuple[CandidateIn | None, str | None, str | None]:

@@ -14,7 +14,7 @@ rather than guess, and there's no fuzzy matching anywhere.
 | region | trim + uppercase, exact match to the 6 codes, or the code with its hyphen removed | `us-mw` (44), ` CO-BOG ` (45), `USW` → `US-W` (46); `ZZ-99` (47), empty (54) → rejected |
 | status | enum `active, screening, interviewing, withdrawn, on_hold`; case-insensitive exact match | `ACTIVE` (48), `on hold` → `on_hold` (50); `actve` (49) → rejected |
 | applied_date | required; `YYYY-MM-DD`, `MM/DD/YYYY`, `DD-Mon-YYYY`; must be a real date | `06/30/2026` (40), `14-May-2026` (41); `2026-02-30` (42), empty (43) → rejected |
-| salary | `$`, `,` and `k` understood; must be a whole non-negative number, else **null + warning** (never rejects a row on its own) | `$95,000`, `97,500`, `85k` (48); `negotiable` → null |
+| salary | `$`, `,` and `k` understood; must be a whole number from 0 to 2,147,483,647, else **null + warning** (never rejects a row on its own) | `$95,000`, `97,500`, `85k` (48); `negotiable` → null |
 | names | required, NFC; Unicode letters/marks, space, `'` `’` `-` `.` only | `Nguyễn Thị Hoa` kept; `O'Connor'); DROP TABLE…` (38) → rejected |
 | free text | phone/role/source/notes stored verbatim (newlines kept) | `' OR '1'='1` (39) stored literally |
 

@@ -153,3 +153,16 @@ def test_recruiters_list(client):
     assert [r["recruiter_id"] for r in recruiters] == ["R-101", "R-102", "R-103", "R-104", "R-105"]
     assert recruiters[0] == {"recruiter_id": "R-101", "full_name": "Dana Whitmore", "is_admin": True, "regions": []}
     assert recruiters[2]["regions"] == ["CO-BOG", "PH-MNL"]
+
+
+@pytest.mark.parametrize(
+    "path, params",
+    [
+        ("/api/v1/candidates", {"search": "a\x00b"}),
+        ("/api/v1/candidates", {"page": 10**18}),
+        ("/api/v1/candidates/C-10%0001", {}),
+    ],
+    ids=["nul-search", "huge-page", "nul-path"],
+)
+def test_hostile_query_input_is_422_not_500(client, path, params):
+    assert get(client, path, DANA, **params).status_code == 422

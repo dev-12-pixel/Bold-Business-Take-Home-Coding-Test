@@ -183,3 +183,17 @@ def test_db_collision_rejected(client, db):
 def test_unicode_round_trip(client, db, raw_csv):
     upload(client, raw_csv)
     assert scalar(db, "SELECT first_name || ' ' || last_name FROM candidates WHERE candidate_id = 'C-1008'") == "Nguyễn Thị Hoa"
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        "C-9001,Ana,Lopez,ana@example.com,,US-W,QA,3000000k,2026-07-01,Active,,",
+        'C-9001,Ana,Lopez,ana@example.com,,US-W,QA,,2026-07-01,Active,,"oops',
+        "C-9001,Ana,Lopez,ana@example.com,,US-W,QA,,2026-07-01,Active,,a\x00b",
+    ],
+    ids=["huge-salary", "stray-quote", "nul-byte"],
+)
+def test_hostile_cells_never_500(client, row):
+    response = upload(client, f"{HEADER}\n{row}\n".encode())
+    assert response.status_code in (200, 400), response.text
