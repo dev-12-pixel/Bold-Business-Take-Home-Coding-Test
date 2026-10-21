@@ -20,7 +20,7 @@
 - Report row numbers: spreadsheet rows, header = 1 (D1).
 - Images: `postgres:16-alpine`, `python:3.12-slim`, `node:22-alpine` (already pulled; if a pull fails, use `public.ecr.aws/docker/library/<name>` and retag).
 - Backend tests run with: `docker compose run --rm api pytest -q` (exact command used everywhere below).
-- Commits: small, one per task minimum, message ends with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Commits: small, one per task minimum, conventional messages, **no** Co-Authored-By/AI trailer (user instruction).
 
 ## Review Focus
 
