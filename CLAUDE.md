@@ -46,6 +46,7 @@ Prefer rejecting with a reason over guessing. No fuzzy matching anywhere.
 | D24 | Pagination | `page` ≥1 (default 1), `page_size` 1–100 (default 25); response `{items, total, page, page_size}`; order `applied_date DESC, candidate_id ASC`. | Claude's call |
 | D25 | Search | Case-insensitive substring over first_name, last_name, email, desired_role; `%`, `_`, `\` escaped (literal); `status` must be in enum else 422. | Claude's call |
 | D26 | Brief PDF | Not committed (company document); `.gitignore` excludes `*.pdf`. | Claude's call |
+| D28 | Source files in git | `candidates_import.csv`, `recruiters.csv` and the brief PDF are git-ignored and untracked; they stay on disk at the repo root and are mounted into the API container at `/data/`. README must tell a reader to place them there. | User |
 | D27 | ID claim | The first valid row to use a candidate_id owns it for the whole import; a later row with that id and a different email is rejected (D4), even if the owner is later superseded by email. | Claude's call |
 
 ## 3. Row-by-row audit and expected outcome (candidates_import.csv)
@@ -96,5 +97,6 @@ unknown recruiter → 403, full-file report equals §3 expected counts.
 ## 6. Work log
 - 2026-10-21 — Scoping: byte-level audit of both CSVs, decisions D1–D19 agreed. No code yet.
 - 2026-10-21 — Implementation plan written: `docs/superpowers/plans/2026-10-21-techforce-take-home.md` (Tasks 0–8; proposes D20–D27, added in Task 0).
-- 2026-10-21 — Task 0: `.gitignore`, decisions D20–D27 recorded, source CSVs + plan committed. Work happens on `main` (empty repo, user asked for commits there).
+- 2026-10-21 — Task 0: `.gitignore`, decisions D20–D27 recorded, source CSVs + plan committed. Work happens on `main` (empty repo, user asked for commits there). User rule: no Co-Authored-By/AI trailer in commit messages.
+- 2026-10-21 — Task 1: docker-compose (db + api), `db/init/01-roles.sh` creates `techforce_app` (NOSUPERUSER, NOBYPASSRLS) and `techforce_test` DB; FastAPI skeleton with `/healthz`; `pytest.ini` sets `pythonpath = .` and silences one third-party starlette/anyio DeprecationWarning. Tests: `docker compose run --rm api pytest -q` → 1 passed.
 

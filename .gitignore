@@ -5,5 +5,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.pdf
+Full-Stack Engineer — Coding Test.pdf
+candidates_import.csv
+recruiters.csv
 .superpowers/
 *.tsbuildinfo
