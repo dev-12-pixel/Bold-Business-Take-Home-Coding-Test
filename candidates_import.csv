@@ -1,0 +1,56 @@
+candidate_id,first_name,last_name,email,phone,region_code,desired_role,salary_expectation,applied_date,status,source,notes
+C-1001,Alicia,Trent,alicia.trent@gmail.com,+1 (734) 555-0142,US-MW,Full-Stack Engineer,"$95,000",2026-05-14,Active,LinkedIn,Strong React portfolio
+C-1002,Marcus,Bellamy,m.bellamy@outlook.com,734-555-0187,US-MW,Backend Engineer,88000,2026-05-16,Active,Referral,Referred by D. Okafor
+C-1003,Priya,Raman,priya.raman@yahoo.com,(312) 555-0165,US-MW,Data Engineer,"$102,000",2026-05-18,Interviewing,Indeed,
+C-1004,Daniel,Okafor,daniel.okafor@gmail.com,+1 312 555 0110,US-MW,Full-Stack Engineer,"97,500",2026-05-19,Active,LinkedIn,Has FastAPI production exp
+C-1005,Hannah,Weiss,hweiss@protonmail.com,616.555.0134,US-MW,Frontend Engineer,83000,2026-05-21,Screening,Careers page,
+C-1006,Tomás,Herrera,tomas.herrera@gmail.com,+57 601 555 0177,CO-BOG,Full-Stack Engineer,72000,2026-05-22,Active,LinkedIn,Bilingual EN/ES
+C-1007,Grace,Lim,grace.lim@gmail.com,+63 917 555 0122,PH-MNL,QA Engineer,45000,2026-05-23,Active,JobStreet,
+C-1008,Nguyễn,Thị Hoa,hoa.nguyen@gmail.com,+63 905 555 0161,PH-MNL,Frontend Engineer,48000,2026-05-25,Interviewing,Referral,Unicode name — display must not mangle
+C-1009,Peter,Vance,p.vance@icloud.com,(415) 555-0129,US-W,Full-Stack Engineer,"$120,000",2026-05-26,Active,LinkedIn,
+C-1010,Sofía,Cárdenas,sofia.cardenas@hotmail.com,+57 310 555 0148,CO-BOG,Backend Engineer,70000,2026-05-27,Screening,Referral,
+C-1011,Ethan,Marsh,ethan.marsh@gmail.com,404-555-0156,US-SE,DevOps Engineer,"$99,000",2026-05-28,Active,Indeed,
+C-1012,Lauren,Petty,lauren.petty@gmail.com,404.555.0171,US-SE,Full-Stack Engineer,91000,2026-05-29,Active,Careers page,
+C-1013,Miguel,Santos,miguel.santos@gmail.com,+63 917 555 0190,PH-MNL,Full-Stack Engineer,52000,2026-06-01,Active,JobStreet,
+C-1014,Rachel,Ostrander,r.ostrander@gmail.com,+1 (206) 555-0118,US-W,Data Engineer,"$110,000",2026-06-02,Interviewing,LinkedIn,
+C-1015,Jürgen,Müller,jurgen.mueller@gmail.com,+1 646 555 0183,US-NE,Backend Engineer,105000,2026-06-03,Active,LinkedIn,Relocating from Berlin
+C-1016,Amara,Diallo,amara.diallo@gmail.com,(917) 555-0125,US-NE,Full-Stack Engineer,"$108,000",2026-06-04,Active,Referral,
+C-1017,Kevin,Bright,kevin.bright@aol.com,617-555-0147,US-NE,Frontend Engineer,94000,2026-06-05,Screening,Indeed,
+C-1018,Isabel,Reyes,isabel.reyes@gmail.com,+63 926 555 0139,PH-MNL,Recruiter Ops Analyst,38000,2026-06-08,Active,JobStreet,
+C-1019,Owen,Callahan,owen.callahan@gmail.com,(313) 555-0192,US-MW,Full-Stack Engineer,89000,2026-06-09,Withdrawn,LinkedIn,Accepted elsewhere
+C-1020,Farah,Nasser,farah.nasser@gmail.com,+1 248 555 0107,US-MW,Backend Engineer,"$92,000",2026-06-10,Active,Careers page,
+C-1021,Jack,Whitfield,jack.whitfield@gmail.com,206.555.0173,US-W,Full-Stack Engineer,115000,2026-06-11,Active,LinkedIn,
+C-1022,Bianca,Moreau,bianca.moreau@gmail.com,+1 (305) 555-0154,US-SE,QA Engineer,78000,2026-06-12,Interviewing,Indeed,
+C-1023,Leo,Tanaka,leo.tanaka@gmail.com,(408) 555-0166,US-W,Backend Engineer,"$118,000",2026-06-15,Active,Referral,
+C-1024,Carmen,Villanueva,carmen.v@gmail.com,+63 917 555 0102,PH-MNL,Full-Stack Engineer,50000,2026-06-16,Active,JobStreet,
+C-1025,Andre,Fontaine,andre.fontaine@gmail.com,504-555-0138,US-SE,Data Engineer,96000,2026-06-17,Screening,LinkedIn,
+C-1026,Nadia,Kowalski,nadia.kowalski@gmail.com,(773) 555-0181,US-MW,Frontend Engineer,"$86,000",2026-06-18,Active,Careers page,
+C-1027,Sam,Pruitt,sam.pruitt@gmail.com,615.555.0114,US-SE,Full-Stack Engineer,93000,2026-06-19,Active,Indeed,
+C-1028,Elena,Vargas,elena.vargas@gmail.com,+57 315 555 0126,CO-BOG,QA Engineer,41000,2026-06-22,Active,Referral,
+C-1029,Trevor,Nash,trevor.nash@gmail.com,(646) 555-0158,US-NE,DevOps Engineer,"$112,000",2026-06-23,Interviewing,LinkedIn,
+C-1030,Mei,Chen,mei.chen@gmail.com,+1 917 555 0169,US-NE,Full-Stack Engineer,106000,2026-06-24,Active,Referral,
+C-1004,Daniel,Okafor,daniel.okafor@gmail.com,+1 312 555 0110,US-MW,Full-Stack Engineer,"97,500",2026-05-19,Active,LinkedIn,Has FastAPI production exp
+C-1031,Alicia,Trent,  Alicia.Trent@Gmail.com ,+1 (734) 555-0142,US-MW,Full-Stack Engineer,"$95,000",2026-05-14,Active,Indeed,Possible re-application
+C-1032,A.,Diallo,amara.diallo@gmail.com,917-555-9999,US-NE,Full-Stack Engineer,"$110,000",2026-06-20,Active,Indeed,Which record wins?
+C-1033,Marcus,Reed,marcus.reed[at]gmail.com,(213) 555-0144,US-W,Backend Engineer,100000,2026-06-25,Active,LinkedIn,
+C-1034,Tina,Holloway,tina.holloway.gmail.com,813-555-0119,US-SE,QA Engineer,76000,2026-06-25,Screening,Indeed,No @ in email
+C-1035,Bo,Lindqvist,,(312) 555-0177,US-MW,Data Engineer,98000,2026-06-26,Active,Referral,Email missing entirely
+C-1036,Robert,O'Connor'); DROP TABLE candidates;--,robert.oconnor@gmail.com,(508) 555-0121,US-NE,Full-Stack Engineer,101000,2026-06-26,Active,LinkedIn,Classic injection probe in last_name
+C-1037,Dana,Whitlock,dana.whitlock@gmail.com,702-555-0163,US-W,Frontend Engineer,87000,2026-06-29,Active,Indeed,' OR '1'='1
+C-1038,Hank,Boseman,hank.boseman@gmail.com,(216) 555-0136,US-MW,DevOps Engineer,95000,06/30/2026,Active,LinkedIn,US-format date
+C-1039,Yara,Abadi,yara.abadi@gmail.com,(347) 555-0128,US-NE,Backend Engineer,104000,14-May-2026,Screening,Referral,Text-format date
+C-1040,Cole,Ramsey,cole.ramsey@gmail.com,904-555-0152,US-SE,Full-Stack Engineer,90000,2026-02-30,Active,Indeed,Impossible calendar date
+C-1041,Petra,Novak,petra.novak@gmail.com,(602) 555-0197,US-W,QA Engineer,80000,,Active,Careers page,Date missing
+C-1042,Gordon,Ferris,gordon.ferris@gmail.com,(816) 555-0149,us-mw,Full-Stack Engineer,88000,2026-07-01,Active,LinkedIn,Lowercase region
+C-1043,Lucía,Pardo,lucia.pardo@gmail.com,+57 300 555 0195, CO-BOG ,Backend Engineer,68000,2026-07-02,Active,Referral,Whitespace region
+C-1044,Wesley,Trần,wesley.tran@gmail.com,(714) 555-0186,USW,Frontend Engineer,98000,2026-07-02,Active,Indeed,Missing hyphen in region
+C-1045,Ingrid,Solberg,ingrid.solberg@gmail.com,(651) 555-0113,ZZ-99,Data Engineer,99000,2026-07-06,Active,LinkedIn,Region not in reference list
+C-1046,Barry,Quill,barry.quill@gmail.com,(614) 555-0175,US-MW,Full-Stack Engineer,85k,2026-07-07,ACTIVE,Indeed,"Uppercase status, salary as 85k"
+C-1047,Renee,Ashford,renee.ashford@gmail.com,(919) 555-0130,US-SE,Backend Engineer,negotiable,2026-07-08,actve,LinkedIn,Misspelled status
+C-1048,Victor,Hale,victor.hale@gmail.com,(212) 555-0159,US-NE,DevOps Engineer,,2026-07-09,on hold,Referral,Status not in enum
+C-1049,Maya,Castellanos-Ruiz,maya.cr@gmail.com,(505) 555-0141,US-W,Full-Stack Engineer,107000,2026-07-10,Active,Referral,"Prefers remote, but open to hybrid in Denver, CO"
+C-1050,Oliver,Grant,oliver.grant@gmail.com,(802) 555-0168,US-NE,Data Engineer,103000,2026-07-13,Active,LinkedIn,"Interview notes:
+Round 1 passed.
+Round 2 pending scheduling."
+C-1010,Becca,Storm,becca.storm@gmail.com,(414) 555-0176,US-MW,QA Engineer,74000,2026-07-14,Active,Indeed,Same ID as Sofía Cárdenas — ID collision
+C-1051,Ivan,Petrov,ivan.petrov@gmail.com,,,Full-Stack Engineer,96000,2026-07-15,Active,LinkedIn,"No phone, no region"
