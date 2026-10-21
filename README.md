@@ -35,7 +35,7 @@ Marisol (PH-MNL, CO-BOG) 9, Dana (admin) all 40.
 ## Tests
 
 ```bash
-docker compose run --rm api pytest -q    # backend: 133 tests against real Postgres
+docker compose run --rm api pytest -q    # backend: 146 tests against real Postgres
 docker compose run --rm web npm test     # frontend: 4 vitest tests
 ```
 
