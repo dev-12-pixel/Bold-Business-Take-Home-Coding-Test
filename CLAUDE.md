@@ -117,3 +117,78 @@ unknown recruiter → 403, full-file report equals §3 expected counts.
 - 2026-10-21 — Security review (fresh reviewer over 6e712a3..aa641cb): no Critical. Every finding re-verified with a test or probe. Fixed RED→GREEN: (1) unlimited body read before auth — refused callers' 50 MB body fully read (52/52 chunks) → now 0 chunks, D33; (2) DB-id-rejected winner dropped an earlier valid row and reported a phantom merge → D31; (3) recruiters removed from the roster kept access → D30; (4, upgraded from Minor) concurrent imports 500 with KeyError in 4/5 probe rounds; also found the async endpoint ran blocking DB work on the event loop → D32. Live: 100 MB upload as R-999/R-102 → 403 with 0 bytes sent, admin → 413; re-import still 0/43/10. Playwright pass over the UI: Caleb 19 (US-MW/US-NE), Marisol 9, Dana 40 over 2 pages, Unicode renders, hostile search terms → 0 rows/422, header sent per switch. Minors verified but not fixed (await user): temp-table shadowing of `recruiters` in `app_can_see` (persists on the pooled connection), duplicate X-Recruiter-Id first-wins, non-ASCII digits/long-s accepted by normalizers, punctuation-only names, year-0001 dates, owner role is superuser, no DB CHECKs mirroring D6/D7/D12. → 155 passed.
 - 2026-10-21 — Committed review fixes (cba148e, 978a71f, 58c518c). D34: RLS hardening test-first — RED showed Caleb seeing all 6 regions through a shadowing temp table; now app role gets "permission denied to create temporary tables" and the function ignores a shadow even with TEMP granted. Dev DB re-migrated (API restart); counts unchanged 40/19/9. → 157 passed.
 - 2026-10-21 — D10 revised + ASCII-only codes (D8, D11, D12), test-first: 11 RED (ambiguous slash dates, unpadded ISO, Arabic-Indic digits in id/date/salary, long-s region, year 0001/1999/next+1) → GREEN. Real file still 40/3/10 (only slash date is row 40's unambiguous 06/30). UI: dates, region codes and status pills no longer wrap at the hyphen (checked in Playwright at 825px). → 173 passed; frontend 4 passed, build clean.
+- 2026-10-21 — Committed D10/ASCII (cdb4fc0) and UI no-wrap (126f2ce). Wrote §7 (review triage, Playwright pass, decision re-review, open backlog, gotchas).
+
+## 7. Security review and decision re-review (2026-10-21)
+
+### 7.1 Process
+1. A fresh reviewer subagent was given the brief, this file and the source CSVs, and reviewed 6e712a3..aa641cb with a security focus: RLS, injection, header handling, validation, DB constraints and merge correctness. It ran probes only against `techforce_test`.
+2. Every finding was re-verified with a failing test or a probe before being accepted. Fixes were made test-first (RED shown, then GREEN). No finding was taken on the reviewer's word.
+3. A Playwright pass over the running app ran in parallel with the review.
+
+### 7.2 Findings triage
+| # | Reviewer severity | Finding | Verification | Disposition |
+|---|---|---|---|---|
+| 1 | Important | The multipart body was read before the admin check, with no transport cap | ASGI test: a refused caller had 52/52 one-MB chunks pulled before the 403. Live 200 MB repro by the reviewer | **Fixed** (D33). Now 0 chunks read. Live 100 MB as R-999/R-102 → 403 with 0 bytes sent; admin → 413 |
+| 2 | Important | A winner rejected for a DB candidate_id collision had already superseded an earlier valid row → data lost and the report showed a phantom merge | API test: report `(0 imported, 1 merged)`, nothing stored for the email | **Fixed** (D31) |
+| 3 | Important | Recruiters removed from recruiters.csv kept their row and access | Seed test: R-900 admin survived a reseed | **Fixed** (D30) |
+| 11 | Minor → **raised to Important** | Concurrent imports race between the snapshot and the upsert | Probe: `KeyError` 500 in 4 of 5 rounds. Also found the async endpoint ran blocking DB work on the event loop | **Fixed** (D32) |
+| 4 | Minor | A temp table named `recruiters` shadows the real one inside `app_can_see` | Probe: Caleb went from 0 to 1 PH-MNL row. Also found the shadow **persists on the pooled connection**: it broke `get_recruiter` for the next request on that connection | **Fixed** (D34, user-approved hardening) |
+| 5 | Minor | Non-ASCII lookalikes normalize to valid values (`C-١٢٣٤`, `uſ-mw`, Arabic-Indic digits in dates and salaries; the Kelvin sign in email folds to `k`) | Probe confirmed each case | **Fixed** for ID, region, date and salary (D8/D10/D11/D12). Email left as is: internationalized addresses are legitimate (D7) |
+| 6 | Minor | Lax values: name `.`/`-'`/a lone combining mark; dates `0001-01-01`, `2026-1-5` | Probe confirmed | Dates **fixed** (D10). Names **deferred** (D6 change not yet approved) |
+| 7 | Minor | Duplicate `X-Recruiter-Id` headers: the first one wins | Probe: `R-102, R-999` → 200 (should be 403) | **Open**, not yet approved |
+| 8 | Minor | `techforce_owner` is the image superuser; hard-coded dev passwords; port 5432 published; password interpolated into SQL in `01-roles.sh` | Probe: `rolsuper = true` | **Open**. Acceptable for dev, but should be stated in README |
+| 9 | Minor | No DB CHECKs mirroring D6/D7/D12 (lowercase email, ID format, non-blank names); email uniqueness is case-sensitive | Read from schema.sql | **Open** (hardening, not yet done) |
+| 10 | Minor | `GET /api/v1/recruiters` is unauthenticated and reveals the admin ID | Probe: 200 with no header | **Accepted** as inherent to the brief's header-only identity; should get a NOTES line |
+| 12 | Minor | NOTES AI usage log is still TODO | — | **Left for the candidate** (must be written personally) |
+
+The reviewer's "Declined to judge" items were accepted as out of scope: upsert vs. an out-of-scope row (only admins import), count/page skew under READ COMMITTED, CSV formula injection (no CSV output), D27 itself, the already-deferred UI minors, rate limiting, `app_can_see` not leakproof (not a leak), and ilike performance.
+
+### 7.3 Playwright pass (UI at :5173 through the Vite proxy)
+- Default view is Caleb: 19 rows, only US-MW/US-NE, "Scope: US-MW, US-NE".
+- Marisol: 9 rows, CO-BOG/PH-MNL. Unicode names render correctly (Lucía, Sofía, Nguyễn Thị Hoa, Tomás).
+- Dana: 40 rows over 2 pages (25 + 15), all 6 regions.
+- The switcher sends `x-recruiter-id` on every request (seen in the request headers).
+- Search: `nguyễn` → 1 row. `%`, `_`, `\`, `' OR '1'='1`, `'); DROP TABLE…`, `<img onerror>` → 0 rows with 200. 201 characters or a NUL → 422.
+- Headers: missing, empty, whitespace, `r-102` (wrong case), R-999 and injection-shaped IDs → 403. A padded `" R-102 "` → 200 only because browsers strip header whitespace before sending.
+- Detail endpoint: Caleb on a PH-MNL ID → 404; Dana → 200; Marisol on a US-MW ID → 404; unknown recruiter → 403.
+- Import: no header / R-999 → 403 "unknown recruiter", R-102 → 403 "admin only", bad header row → 400. Re-importing the real file → 0/43/10.
+- Observed, not fixed:
+  - Two requests aborted on load (React StrictMode dev double-mount; the abort controller handles it).
+  - favicon 404.
+  - The known double fetch when switching recruiter on page 2.
+  - One "Next" click that did nothing; it could not be reproduced on retry.
+- Fixed: dates and region codes wrapped at the hyphen at 825px → `white-space: nowrap` (126f2ce). Verified with a line-box check and a screenshot.
+
+### 7.4 Senior re-review of the decision log, with the user's rulings
+| Item | Recommendation | User ruling |
+|---|---|---|
+| D10 slash dates | MM/DD is a guess for Bogotá/Manila sources; reject when both readings are valid and differ. Add a 2000→next-year range and exact ASCII shapes | **Approved, done** |
+| D8/D11/D12 ASCII | Require ASCII before case-mapping or matching | **Approved, done** |
+| `app_can_see` hardening | Schema-qualify, pin `search_path`, revoke TEMP | **Approved, done** (D34) |
+| UI date wrapping | nowrap | **Approved, done** |
+| D2 candidate_id churn | The winner replaces the ID, so a stored C-1001 can become C-1031 on re-import. Keep the earliest ID and take the details from the last row | Deferred: changes expected report/tests; mention in NOTES next steps |
+| D5/D16 `updated` count | "merged" mixes in-file duplicates with DB updates (re-import says merged 43). Add `updated` | Deferred: note in NOTES |
+| D6 names | Require at least one letter; consider allowing an empty last name (mononyms) | Not yet approved |
+| Duplicate header | More than one `X-Recruiter-Id` → 403 | Not yet approved |
+| DB CHECKs, non-superuser owner | Defence in depth | Not yet approved |
+| D11 currency | Salaries have no currency, so cross-region figures aren't comparable | Note only |
+| Keep as is | D1, D3, D4, D7, D9, D13–D15, D17–D30. D21 (403 for a missing header) matches the brief over 401 convention. D22's 404 doesn't leak existence. D27 is conservative but explicit and consistent | — |
+
+### 7.5 Open backlog
+1. Reject duplicate `X-Recruiter-Id` headers.
+2. D6: names must contain at least one letter.
+3. DB CHECKs: `email = lower(email)`, `candidate_id ~ '^C-[0-9]{4}$'`, non-blank names, applied_date range.
+4. Non-superuser schema owner; README "Security model and limits" section (trusted header, trusted app role, dev passwords, upload cap, unauthenticated roster).
+5. NOTES next steps: D2 ID preservation, `updated` count, salary currency.
+6. UI minors: double fetch on page reset, stale rows on switch, shared error slot, favicon.
+7. NOTES AI usage log (candidate). Material from this review: the phantom merge, the upload read before auth, and the concurrency test that passed for the wrong reason.
+
+### 7.6 Gotchas learned
+- **FastAPI reads declared body parameters (`UploadFile`, `Form`) before running dependencies**, so auth in `Depends` doesn't protect against large uploads. Take `Request` and parse after auth.
+- **Starlette's form parser returns `starlette.datastructures.UploadFile`**; FastAPI's `UploadFile` is a subclass, so `isinstance` against FastAPI's class fails.
+- **An entered `with TestClient(app)` runs requests on one portal/event loop.** Together with an `async def` endpoint doing blocking DB work, that serialized "concurrent" requests and hid the race. Use one un-entered client per thread to really overlap requests.
+- **Postgres temp tables live for the session, not the transaction**, so with pooling one shadowing table affects later requests on that connection.
+- **psycopg treats `%` in `exec_driver_sql` text as a placeholder**: `format('%I', …)` in schema.sql fails, so use `quote_ident(...)`.
+- **schema.sql is applied only at API startup**: uvicorn `--reload` watches `.py` files, so restart `api` after editing SQL.
+- **Browsers strip leading/trailing whitespace from header values**, so padded-header tests must use a raw client, not `fetch`.
