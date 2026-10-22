@@ -44,20 +44,31 @@ ALTER TABLE candidates FORCE ROW LEVEL SECURITY;
 
 -- True when the recruiter named by the transaction-local setting app.recruiter_id
 -- is an admin or is assigned this region. Unset or unknown recruiter -> false.
+-- Tables are schema-qualified and search_path is pinned with pg_temp last, so a
+-- temp table named `recruiters` can never stand in for the real roster.
 CREATE OR REPLACE FUNCTION app_can_see(region text) RETURNS boolean
-LANGUAGE sql STABLE AS $$
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, pg_temp
+AS $$
     SELECT EXISTS (
         SELECT 1
-        FROM recruiters r
+        FROM public.recruiters r
         WHERE r.recruiter_id = NULLIF(current_setting('app.recruiter_id', true), '')
           AND (
               r.is_admin
               OR EXISTS (
-                  SELECT 1 FROM recruiter_regions rr
+                  SELECT 1 FROM public.recruiter_regions rr
                   WHERE rr.recruiter_id = r.recruiter_id AND rr.region_code = region
               )
           )
     )
+$$;
+
+-- The app role needs no temp tables; without TEMP it can't shadow anything at all.
+DO $$
+BEGIN
+    EXECUTE 'REVOKE TEMPORARY ON DATABASE ' || quote_ident(current_database()) || ' FROM PUBLIC';
+END
 $$;
 
 DROP POLICY IF EXISTS candidates_select ON candidates;

@@ -3,6 +3,7 @@ Postgres directly as the app role, without any API code in between."""
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
 from app.db import app_engine, scoped
@@ -86,3 +87,33 @@ def test_app_role_cannot_delete(one_per_region):
     with pytest.raises(DBAPIError, match="permission denied"):
         with scoped("R-101") as conn:
             conn.execute(text("DELETE FROM candidates"))
+
+
+def test_app_role_cannot_create_temp_tables(db):
+    # A temp table named `recruiters` would shadow the real one for the rest of
+    # the pooled connection's life, so the app role gets no TEMP privilege.
+    engine = create_engine(get_settings().app_url, poolclass=NullPool)
+    with pytest.raises(DBAPIError, match="permission denied"):
+        with engine.begin() as conn:
+            conn.execute(text("CREATE TEMP TABLE recruiters (recruiter_id text, is_admin boolean)"))
+
+
+def test_app_can_see_ignores_a_shadowing_temp_table(db, one_per_region):
+    # Defence in depth: even with TEMP granted, app_can_see reads public.recruiters.
+    database = get_settings().db_name
+    with db.begin() as conn:
+        conn.exec_driver_sql(f'GRANT TEMPORARY ON DATABASE "{database}" TO techforce_app')
+    engine = create_engine(get_settings().app_url, poolclass=NullPool)
+    try:
+        with scoped("R-102", engine) as conn:
+            conn.execute(
+                text(
+                    "CREATE TEMP TABLE recruiters (recruiter_id text, full_name text,"
+                    " email text, is_admin boolean)"
+                )
+            )
+            conn.execute(text("INSERT INTO recruiters VALUES ('R-102', 'x', 'x', true)"))
+            assert visible_regions(conn) == {"US-MW", "US-NE"}
+    finally:
+        with db.begin() as conn:
+            conn.exec_driver_sql(f'REVOKE TEMPORARY ON DATABASE "{database}" FROM techforce_app')
