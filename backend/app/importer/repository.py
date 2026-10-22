@@ -1,4 +1,5 @@
 """Writes an import to Postgres in one transaction with batched statements."""
+
 from dataclasses import asdict
 
 from sqlalchemy import Connection, func, literal_column, select

@@ -1,10 +1,9 @@
 """Field-level rules (CLAUDE.md D6-D13). Inputs are the literal values from the audit."""
+
 import unicodedata
 from datetime import date
 
 import pytest
-
-MAX_DATE = f"{date.today().year + 1}-12-31"
 
 from app.importer.normalize import (
     REGIONS,
@@ -19,9 +18,11 @@ from app.importer.normalize import (
     parse_salary,
 )
 
+MAX_DATE = f"{date.today().year + 1}-12-31"
+
 
 def test_canonical_sets():
-    assert REGIONS == {"US-MW", "US-NE", "US-SE", "US-W", "PH-MNL", "CO-BOG"}
+    assert {"US-MW", "US-NE", "US-SE", "US-W", "PH-MNL", "CO-BOG"} == REGIONS
     assert STATUSES == ("active", "screening", "interviewing", "withdrawn", "on_hold")
 
 
@@ -143,7 +144,10 @@ def test_date_parsed(raw, expected):
         # Plausible range for an application date.
         ("0001-01-01", "date '0001-01-01' outside 2000-01-01 to " + MAX_DATE),
         ("1999-12-31", "date '1999-12-31' outside 2000-01-01 to " + MAX_DATE),
-        (f"{date.today().year + 2}-01-01", f"date '{date.today().year + 2}-01-01' outside 2000-01-01 to " + MAX_DATE),
+        (
+            f"{date.today().year + 2}-01-01",
+            f"date '{date.today().year + 2}-01-01' outside 2000-01-01 to " + MAX_DATE,
+        ),
     ],
 )
 def test_date_rejected(raw, message):
@@ -168,7 +172,8 @@ def test_salary_parsed(raw, expected):
 
 
 @pytest.mark.parametrize(
-    "raw", ["negotiable", "-5", "1,2,3", "85.5", "$", "\u0669\u0660\u0660\u0660\u0660", "\uff19\uff10k"]
+    "raw",
+    ["negotiable", "-5", "1,2,3", "85.5", "$", "\u0669\u0660\u0660\u0660\u0660", "\uff19\uff10k"],
 )
 def test_salary_unparseable_is_null_with_warning(raw):
     assert parse_salary(raw) == (None, f"salary '{raw}' is not numeric; stored as null")
@@ -187,9 +192,7 @@ def test_name_trimmed_and_nfc():
     assert normalize_name(f"  {nfd} ") == "Tomás"
 
 
-@pytest.mark.parametrize(
-    "raw", ["O'Connor'); DROP TABLE candidates;--", "Bob<script>", "R2D2"]
-)
+@pytest.mark.parametrize("raw", ["O'Connor'); DROP TABLE candidates;--", "Bob<script>", "R2D2"])
 def test_name_rejected(raw):
     with pytest.raises(ValueError) as exc:
         normalize_name(raw)
@@ -217,7 +220,9 @@ def test_candidate_id():
 def test_clean_optional_keeps_text_verbatim():
     assert clean_optional("  ") is None
     assert clean_optional(" ' OR '1'='1 ") == "' OR '1'='1"
-    assert clean_optional("Round 1 passed.\nRound 2 pending.") == "Round 1 passed.\nRound 2 pending."
+    assert (
+        clean_optional("Round 1 passed.\nRound 2 pending.") == "Round 1 passed.\nRound 2 pending."
+    )
 
 
 @pytest.mark.parametrize("raw", ["99999999999", "3000000k", "$2,147,483,648"])

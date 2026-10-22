@@ -71,7 +71,12 @@ def test_reseed_removes_recruiters_no_longer_in_roster(db):
     with app_engine().connect() as conn:
         assert get_recruiter(conn, "R-900") is None
         assert get_recruiter(conn, "R-901") is None
-        assert conn.execute(text("SELECT count(*) FROM recruiter_regions WHERE recruiter_id = 'R-901'")).scalar() == 0
+        assert (
+            conn.execute(
+                text("SELECT count(*) FROM recruiter_regions WHERE recruiter_id = 'R-901'")
+            ).scalar()
+            == 0
+        )
         assert get_recruiter(conn, "R-102").regions == ("US-MW", "US-NE")
 
 

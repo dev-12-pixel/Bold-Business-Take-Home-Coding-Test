@@ -1,4 +1,5 @@
 """Parse -> validate -> dedup against the real file (CLAUDE.md section 3) plus edge cases."""
+
 from datetime import date
 
 import pytest
@@ -143,7 +144,9 @@ def test_empty_file_raises():
 
 
 def test_stray_quote_is_a_file_error_not_swallowed_rows():
-    data = "\r\n".join([HEADER, VALID.rstrip(",") + ',"oops', VALID.replace("C-9001", "C-9002"), ""])
+    data = "\r\n".join(
+        [HEADER, VALID.rstrip(",") + ',"oops', VALID.replace("C-9001", "C-9002"), ""]
+    )
     with pytest.raises(FileError, match="^malformed CSV"):
         parse_csv(data.encode())
 

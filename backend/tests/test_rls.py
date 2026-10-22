@@ -1,5 +1,6 @@
 """Row-level security is the only scoping mechanism (D18). These tests talk to
 Postgres directly as the app role, without any API code in between."""
+
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError

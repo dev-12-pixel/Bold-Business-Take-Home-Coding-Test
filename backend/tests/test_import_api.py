@@ -1,4 +1,5 @@
 """POST /api/v1/candidates/import end to end against Postgres."""
+
 import asyncio
 import threading
 
@@ -93,7 +94,12 @@ def test_invalid_email_rejected(client, db, raw_csv):
     assert reasons[35] == "email: invalid address 'marcus.reed[at]gmail.com'"
     assert reasons[36] == "email: invalid address 'tina.holloway.gmail.com'"
     assert reasons[37] == "email: required"
-    assert scalar(db, "SELECT count(*) FROM candidates WHERE candidate_id IN ('C-1033','C-1034','C-1035')") == 0
+    assert (
+        scalar(
+            db, "SELECT count(*) FROM candidates WHERE candidate_id IN ('C-1033','C-1034','C-1035')"
+        )
+        == 0
+    )
 
 
 def test_injection_rows(client, db, raw_csv):
@@ -174,7 +180,9 @@ def test_writes_are_batched(client, raw_csv):
 
 
 def test_db_collision_rejected(client, db):
-    insert_candidates(db, {"candidate_id": "C-2000", "email": "a@example.com", "region_code": "US-W"})
+    insert_candidates(
+        db, {"candidate_id": "C-2000", "email": "a@example.com", "region_code": "US-W"}
+    )
     row = "C-2000,Ana,Lopez,b@example.com,,US-W,QA,,2026-07-01,Active,,"
 
     report = upload(client, f"{HEADER}\n{row}\n".encode()).json()
@@ -187,13 +195,17 @@ def test_db_collision_rejected(client, db):
             "reason": "candidate_id: C-2000 already used by an existing candidate with a different email",
         }
     ]
-    assert scalar(db, "SELECT email FROM candidates WHERE candidate_id = 'C-2000'") == "a@example.com"
+    assert (
+        scalar(db, "SELECT email FROM candidates WHERE candidate_id = 'C-2000'") == "a@example.com"
+    )
 
 
 def test_db_rejected_winner_does_not_supersede_earlier_row(client, db):
     # Row 3 would win by email (D2) but its candidate_id is held in the DB by someone
     # else, so it is rejected and must not take row 2 down with it.
-    insert_candidates(db, {"candidate_id": "C-2000", "email": "other@example.com", "region_code": "US-W"})
+    insert_candidates(
+        db, {"candidate_id": "C-2000", "email": "other@example.com", "region_code": "US-W"}
+    )
     rows = [
         "C-1999,Ana,Lopez,x@example.com,,US-W,QA,,2026-07-01,Active,,",
         "C-2000,Ana,Lopez,x@example.com,,US-W,QA,,2026-07-02,Active,,",
@@ -203,7 +215,9 @@ def test_db_rejected_winner_does_not_supersede_earlier_row(client, db):
 
     assert (report["imported"], report["merged"], report["merges"]) == (1, 0, [])
     assert [r["row"] for r in report["rejected"]] == [3]
-    assert scalar(db, "SELECT candidate_id FROM candidates WHERE email = 'x@example.com'") == "C-1999"
+    assert (
+        scalar(db, "SELECT candidate_id FROM candidates WHERE email = 'x@example.com'") == "C-1999"
+    )
 
 
 def test_concurrent_imports_are_serialized(db, raw_csv):
@@ -242,19 +256,31 @@ def asgi_upload(headers: dict[str, str], chunks: int, declared_length: int | Non
     """
     boundary = "b0undary"
     head = (
-        f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="c.csv"\r\n'
-        "Content-Type: text/csv\r\n\r\n"
-    ).encode() + HEADER.encode() + b"\n"
+        (
+            f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="c.csv"\r\n'
+            "Content-Type: text/csv\r\n\r\n"
+        ).encode()
+        + HEADER.encode()
+        + b"\n"
+    )
     parts = [head, *(b"x" * 1024 * 1024 for _ in range(chunks)), f"\r\n--{boundary}--\r\n".encode()]
     raw_headers = [(b"content-type", f"multipart/form-data; boundary={boundary}".encode())]
     raw_headers += [(k.lower().encode(), v.encode()) for k, v in headers.items()]
     if declared_length is not None:
         raw_headers.append((b"content-length", str(declared_length).encode()))
     scope = {
-        "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST",
-        "scheme": "http", "path": "/api/v1/candidates/import", "raw_path": b"/api/v1/candidates/import",
-        "root_path": "", "query_string": b"", "headers": raw_headers,
-        "server": ("test", 80), "client": ("test", 1),
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/api/v1/candidates/import",
+        "raw_path": b"/api/v1/candidates/import",
+        "root_path": "",
+        "query_string": b"",
+        "headers": raw_headers,
+        "server": ("test", 80),
+        "client": ("test", 1),
     }
     pulled = 0
     status = None
@@ -263,7 +289,11 @@ def asgi_upload(headers: dict[str, str], chunks: int, declared_length: int | Non
         nonlocal pulled
         if pulled < len(parts):
             pulled += 1
-            return {"type": "http.request", "body": parts[pulled - 1], "more_body": pulled < len(parts)}
+            return {
+                "type": "http.request",
+                "body": parts[pulled - 1],
+                "more_body": pulled < len(parts),
+            }
         return {"type": "http.disconnect"}
 
     async def send(message):
@@ -294,7 +324,13 @@ def test_undeclared_oversized_body_stops_at_cap(db):
 
 def test_unicode_round_trip(client, db, raw_csv):
     upload(client, raw_csv)
-    assert scalar(db, "SELECT first_name || ' ' || last_name FROM candidates WHERE candidate_id = 'C-1008'") == "Nguyễn Thị Hoa"
+    assert (
+        scalar(
+            db,
+            "SELECT first_name || ' ' || last_name FROM candidates WHERE candidate_id = 'C-1008'",
+        )
+        == "Nguyễn Thị Hoa"
+    )
 
 
 @pytest.mark.parametrize(

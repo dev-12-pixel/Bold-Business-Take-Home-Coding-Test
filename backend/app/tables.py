@@ -1,4 +1,5 @@
 """SQLAlchemy Core view of the tables in schema.sql (which is the source of truth)."""
+
 from sqlalchemy import (
     BigInteger,
     Column,

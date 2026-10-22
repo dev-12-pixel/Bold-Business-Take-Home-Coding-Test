@@ -3,6 +3,7 @@
 There is deliberately no region filter in this module: every query runs in
 db.scoped(), and Postgres row-level security decides which rows exist.
 """
+
 import unicodedata
 from datetime import date
 from enum import Enum

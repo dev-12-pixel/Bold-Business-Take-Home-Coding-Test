@@ -4,6 +4,7 @@ No database access here; repository.import_rows supplies the database's
 candidate_id claims and writes the result.
 Row numbers are spreadsheet rows: the header is row 1 (D1).
 """
+
 import csv
 import io
 from collections.abc import Mapping
@@ -98,7 +99,7 @@ def _validate(raw: RawRow) -> tuple[CandidateIn | None, str | None, str | None]:
     """Return (model, salary_warning, rejection_reason)."""
     if len(raw.fields) != len(EXPECTED_HEADER):
         return None, None, f"expected {len(EXPECTED_HEADER)} fields, got {len(raw.fields)}"
-    values = dict(zip(EXPECTED_HEADER, raw.fields))
+    values = dict(zip(EXPECTED_HEADER, raw.fields, strict=True))
     salary, warning = parse_salary(values["salary_expectation"])
     try:
         model = CandidateIn.model_validate({**values, "salary_expectation": salary})

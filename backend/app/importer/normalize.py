@@ -4,6 +4,7 @@ Every function either returns the canonical value or raises ValueError with a
 short message; the pipeline prefixes it with the field name. Nothing here
 guesses: a value either matches an explicit rule or is rejected.
 """
+
 import re
 import unicodedata
 from datetime import date, datetime

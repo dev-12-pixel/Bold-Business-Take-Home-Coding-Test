@@ -1,4 +1,5 @@
 """GET endpoints. Scoping comes only from RLS; nothing here filters by region in Python."""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -120,12 +121,16 @@ def test_search_wildcards_and_quotes_are_literal(client, term):
 
 
 def test_status_filter(client):
-    assert [c["candidate_id"] for c in list_all(client, DANA, status="on_hold")["items"]] == ["C-1048"]
+    assert [c["candidate_id"] for c in list_all(client, DANA, status="on_hold")["items"]] == [
+        "C-1048"
+    ]
     assert get(client, "/api/v1/candidates", DANA, status="bogus").status_code == 422
 
 
 def test_pagination(client):
-    pages = [get(client, "/api/v1/candidates", DANA, page=n, page_size=15).json() for n in (1, 2, 3, 4)]
+    pages = [
+        get(client, "/api/v1/candidates", DANA, page=n, page_size=15).json() for n in (1, 2, 3, 4)
+    ]
     assert [len(p["items"]) for p in pages] == [15, 15, 10, 0]
     assert {p["total"] for p in pages} == {40}
     ids = [c["candidate_id"] for p in pages for c in p["items"]]
@@ -151,7 +156,12 @@ def test_recruiters_list(client):
     assert response.status_code == 200
     recruiters = response.json()
     assert [r["recruiter_id"] for r in recruiters] == ["R-101", "R-102", "R-103", "R-104", "R-105"]
-    assert recruiters[0] == {"recruiter_id": "R-101", "full_name": "Dana Whitmore", "is_admin": True, "regions": []}
+    assert recruiters[0] == {
+        "recruiter_id": "R-101",
+        "full_name": "Dana Whitmore",
+        "is_admin": True,
+        "regions": [],
+    }
     assert recruiters[2]["regions"] == ["CO-BOG", "PH-MNL"]
 
 

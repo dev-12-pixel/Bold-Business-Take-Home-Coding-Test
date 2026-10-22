@@ -1,0 +1,18 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+# pycodestyle, pyflakes, import order, bugbear, pyupgrade, simplify.
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+# Long lines are the formatter's job; it leaves long string literals alone on purpose.
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+# conftest sets TECHFORCE_DB before importing app modules, by design.
+"tests/conftest.py" = ["E402"]
+# Nested `with pytest.raises(...)` around the statement under test reads clearer than one line.
+"tests/*" = ["SIM117"]
+
+[lint.flake8-bugbear]
+# FastAPI's dependency-injection idiom.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header", "fastapi.Path"]

@@ -1,4 +1,5 @@
 """Recruiter roster: strict load from recruiters.csv and seeding (D17)."""
+
 import csv
 from dataclasses import dataclass
 from pathlib import Path
@@ -137,5 +138,7 @@ def get_recruiter(conn: Connection, recruiter_id: str) -> Recruiter | None:
 
 
 def list_recruiters(conn: Connection) -> list[Recruiter]:
-    rows = conn.execute(text(_RECRUITERS_QUERY + " GROUP BY r.recruiter_id ORDER BY r.recruiter_id"))
+    rows = conn.execute(
+        text(_RECRUITERS_QUERY + " GROUP BY r.recruiter_id ORDER BY r.recruiter_id")
+    )
     return [Recruiter(r[0], r[1], r[2], tuple(r[3])) for r in rows]
