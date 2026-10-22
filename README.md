@@ -20,7 +20,8 @@ enforced by **PostgreSQL Row-Level Security**, not application code.
 docker compose up -d --build        # db :5432, api :8000, web :5173
 ```
 
-On startup the API applies `backend/app/schema.sql` and seeds recruiters from `recruiters.csv`.
+On startup the API applies `backend/app/schema.sql` and syncs recruiters from `recruiters.csv`
+(anyone removed from the file loses access on the next start).
 Candidates are loaded through the import endpoint (admin only):
 
 ```bash
@@ -35,7 +36,7 @@ Marisol (PH-MNL, CO-BOG) 9, Dana (admin) all 40.
 ## Tests
 
 ```bash
-docker compose run --rm api pytest -q    # backend: 146 tests against real Postgres
+docker compose run --rm api pytest -q    # backend: 155 tests against real Postgres
 docker compose run --rm web npm test     # frontend: 4 vitest tests
 ```
 

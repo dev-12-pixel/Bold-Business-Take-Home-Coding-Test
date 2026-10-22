@@ -1,6 +1,6 @@
 # NOTES
 
-Full decision record with row-level evidence: `CLAUDE.md` (D1–D29). Summary below.
+Full decision record with row-level evidence: `CLAUDE.md` (D1–D33). Summary below.
 
 ## Validation & normalization
 
@@ -27,11 +27,14 @@ rather than guess, and there's no fuzzy matching anywhere.
 3. **Same `candidate_id`, different email** = a different person, not a merge. The first row
    to claim the ID keeps it and the later row is rejected (row 53, C-1010 Becca vs Sofía).
 4. Records already in the database count as earlier than the file, so re-importing upserts by
-   email. Invariant: `imported + merged + rejected = rows in the file` (first import 40+3+10,
+   email. An ID already held in the DB by another email is checked **before** dedup, so a row
+   rejected for that never knocks out an earlier valid row with its email.
+   Invariant: `imported + merged + rejected = rows in the file` (first import 40+3+10,
    re-import 0+43+10).
-5. SQL injection: parameterized SQLAlchemy Core only. Writes are one transaction: one
-   collision SELECT plus one multi-row `INSERT … ON CONFLICT` per 1000 rows (a test asserts
-   exactly one INSERT for the real file).
+5. SQL injection: parameterized SQLAlchemy Core only. Writes are one transaction: two
+   lookup SELECTs plus one multi-row `INSERT … ON CONFLICT` per 1000 rows (a test asserts
+   exactly one INSERT for the real file). Concurrent imports are serialized with a
+   transaction-level advisory lock.
 
 ## AI usage log
 
@@ -47,5 +50,6 @@ rather than guess, and there's no fuzzy matching anywhere.
 - Real authentication (signed sessions/JWT) in place of the trusted `X-Recruiter-Id` header.
 - An import audit table (who imported what and when, with the stored report), plus a
   dry-run mode.
-- Stream large files and run imports as background jobs. The 5 MB cap is a placeholder.
+- Run imports as background jobs. The 5 MB cap is a placeholder; it is enforced while the
+  body streams in, and only after the admin check, so a refused caller's body is never read.
 - A review queue so rejected rows can be fixed and re-submitted.
