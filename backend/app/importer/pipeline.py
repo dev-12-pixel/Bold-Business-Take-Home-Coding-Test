@@ -1,10 +1,12 @@
 """Pure import pipeline: bytes -> rows -> validated models -> deduplicated plan.
 
-No database access here; repository.apply_plan writes the result.
+No database access here; repository.import_rows supplies the database's
+candidate_id claims and writes the result.
 Row numbers are spreadsheet rows: the header is row 1 (D1).
 """
 import csv
 import io
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from pydantic import ValidationError
@@ -108,7 +110,11 @@ def _validate(raw: RawRow) -> tuple[CandidateIn | None, str | None, str | None]:
     return model, warning, None
 
 
-def build_plan(rows: list[RawRow]) -> ImportPlan:
+def build_plan(rows: list[RawRow], db_claims: Mapping[str, str] | None = None) -> ImportPlan:
+    """`db_claims` maps candidate_id -> email for ids already stored. Those are the
+    earliest claims (D5, D27), so a row clashing with one is rejected before dedup
+    and never supersedes an earlier row with its email."""
+    db_claims = db_claims or {}
     rejected: list[Rejection] = []
     warnings: dict[int, ImportWarning] = {}
     merges: list[Merge] = []
@@ -120,6 +126,18 @@ def build_plan(rows: list[RawRow]) -> ImportPlan:
         if model is None:
             candidate_id = raw.fields[0].strip() if raw.fields and raw.fields[0].strip() else None
             rejected.append(Rejection(raw.row, candidate_id, reason))
+            continue
+
+        db_email = db_claims.get(model.candidate_id)
+        if db_email is not None and db_email != model.email:
+            rejected.append(
+                Rejection(
+                    raw.row,
+                    model.candidate_id,
+                    f"candidate_id: {model.candidate_id} already used by an existing "
+                    "candidate with a different email",
+                )
+            )
             continue
 
         owner = id_owner.get(model.candidate_id)

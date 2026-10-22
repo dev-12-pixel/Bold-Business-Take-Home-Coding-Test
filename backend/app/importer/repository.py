@@ -1,53 +1,49 @@
-"""Writes an ImportPlan to Postgres in one transaction with batched statements."""
+"""Writes an import to Postgres in one transaction with batched statements."""
 from dataclasses import asdict
 
-from sqlalchemy import Connection, func, literal_column, or_, select
+from sqlalchemy import Connection, func, literal_column, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.importer.pipeline import ImportPlan, Merge, Rejection
+from app.importer.pipeline import Merge, RawRow, build_plan
 from app.importer.schemas import ImportReport
 from app.tables import candidates
 
 # Postgres caps a statement at 65535 bind parameters; 1000 rows x 12 columns stays well under.
 BATCH_SIZE = 1000
 
+# Imports take this transaction-level advisory lock, so they run one at a time:
+# each sees the previous one's committed rows and its id/email snapshot stays true.
+IMPORT_LOCK_KEY = 0x7EC4F0
+
 _UPDATABLE = [
     c.name for c in candidates.columns if c.name not in ("id", "email", "created_at", "updated_at")
 ]
 
 
-def apply_plan(conn: Connection, plan: ImportPlan) -> ImportReport:
+def import_rows(conn: Connection, rows: list[RawRow]) -> ImportReport:
     """`conn` must be scoped to an admin (RLS checks every row written)."""
-    rejected = list(plan.rejected)
-    merges = list(plan.merges)
-    survivors = plan.survivors
-
-    ids = [model.candidate_id for _, model in survivors]
-    emails = [model.email for _, model in survivors]
-    existing = conn.execute(
-        select(candidates.c.candidate_id, candidates.c.email).where(
-            or_(candidates.c.candidate_id.in_(ids), candidates.c.email.in_(emails))
-        )
-    ).all()
-    email_by_id = {cid: email for cid, email in existing}
-    id_by_email = {email: cid for cid, email in existing}
-
-    rows_by_email: dict[str, int] = {}
-    values = []
-    for row, model in survivors:
-        owner_email = email_by_id.get(model.candidate_id)
-        if owner_email is not None and owner_email != model.email:
-            rejected.append(
-                Rejection(
-                    row,
-                    model.candidate_id,
-                    f"candidate_id: {model.candidate_id} already used by an existing "
-                    "candidate with a different email",
-                )
+    conn.execute(select(func.pg_advisory_xact_lock(IMPORT_LOCK_KEY)))
+    file_ids = {raw.fields[0].strip() for raw in rows if raw.fields}
+    db_claims = dict(
+        conn.execute(
+            select(candidates.c.candidate_id, candidates.c.email).where(
+                candidates.c.candidate_id.in_(file_ids)
             )
-            continue
-        rows_by_email[model.email] = row
-        values.append(model.model_dump())
+        ).all()
+    )
+    plan = build_plan(rows, db_claims)
+    merges = list(plan.merges)
+
+    emails = [model.email for _, model in plan.survivors]
+    id_by_email = dict(
+        conn.execute(
+            select(candidates.c.email, candidates.c.candidate_id).where(
+                candidates.c.email.in_(emails)
+            )
+        ).all()
+    )
+    rows_by_email = {model.email: row for row, model in plan.survivors}
+    values = [model.model_dump() for _, model in plan.survivors]
 
     imported = 0
     for start in range(0, len(values), BATCH_SIZE):
@@ -62,11 +58,10 @@ def apply_plan(conn: Connection, plan: ImportPlan) -> ImportReport:
             else:
                 merges.append(Merge(None, id_by_email[email], rows_by_email[email]))
 
-    kept = set(rows_by_email.values())
     return ImportReport(
         imported=imported,
         merged=len(merges),
-        rejected=[asdict(r) for r in sorted(rejected, key=lambda r: r.row)],
-        warnings=[asdict(w) for w in plan.warnings if w.row in kept],
+        rejected=[asdict(r) for r in sorted(plan.rejected, key=lambda r: r.row)],
+        warnings=[asdict(w) for w in plan.warnings],
         merges=[asdict(m) for m in merges],
     )

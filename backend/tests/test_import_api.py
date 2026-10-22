@@ -1,4 +1,7 @@
 """POST /api/v1/candidates/import end to end against Postgres."""
+import asyncio
+import threading
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, text
@@ -147,6 +150,13 @@ def test_oversized_file_413(client):
     assert response.status_code == 413
 
 
+def test_missing_file_field_422(client):
+    response = client.post("/api/v1/candidates/import", data={"other": "x"}, headers=ADMIN)
+    assert response.status_code in (400, 422)
+    response = client.post("/api/v1/candidates/import", headers=ADMIN)
+    assert response.status_code in (400, 422)
+
+
 def test_writes_are_batched(client, raw_csv):
     statements = []
 
@@ -178,6 +188,108 @@ def test_db_collision_rejected(client, db):
         }
     ]
     assert scalar(db, "SELECT email FROM candidates WHERE candidate_id = 'C-2000'") == "a@example.com"
+
+
+def test_db_rejected_winner_does_not_supersede_earlier_row(client, db):
+    # Row 3 would win by email (D2) but its candidate_id is held in the DB by someone
+    # else, so it is rejected and must not take row 2 down with it.
+    insert_candidates(db, {"candidate_id": "C-2000", "email": "other@example.com", "region_code": "US-W"})
+    rows = [
+        "C-1999,Ana,Lopez,x@example.com,,US-W,QA,,2026-07-01,Active,,",
+        "C-2000,Ana,Lopez,x@example.com,,US-W,QA,,2026-07-02,Active,,",
+    ]
+
+    report = upload(client, "\n".join([HEADER, *rows]).encode()).json()
+
+    assert (report["imported"], report["merged"], report["merges"]) == (1, 0, [])
+    assert [r["row"] for r in report["rejected"]] == [3]
+    assert scalar(db, "SELECT candidate_id FROM candidates WHERE email = 'x@example.com'") == "C-1999"
+
+
+def test_concurrent_imports_are_serialized(db, raw_csv):
+    # One un-entered TestClient per thread: each request gets its own event loop,
+    # so they really overlap (a shared entered client runs them one at a time).
+    results = []
+
+    def run():
+        try:
+            response = upload(TestClient(create_app()), raw_csv)
+            results.append((response.status_code, response.json()))
+        except Exception as exc:  # a server error surfaces here as the raised exception
+            results.append((500, repr(exc)))
+
+    for _ in range(5):
+        with db.begin() as conn:
+            conn.execute(text("TRUNCATE candidates RESTART IDENTITY"))
+        results.clear()
+        threads = [threading.Thread(target=run) for _ in range(6)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert [status for status, _ in results] == [200] * 6
+        assert sorted(r["imported"] for _, r in results) == [0] * 5 + [40]
+        assert all(r["imported"] + r["merged"] + len(r["rejected"]) == 53 for _, r in results)
+        assert scalar(db, "SELECT count(*) FROM candidates") == 40
+
+
+def asgi_upload(headers: dict[str, str], chunks: int, declared_length: int | None = None):
+    """POST a multipart body of `chunks` x 1 MB straight to the ASGI app.
+
+    Returns (status, chunks the app pulled), which shows whether the body was
+    read before the request was refused.
+    """
+    boundary = "b0undary"
+    head = (
+        f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="c.csv"\r\n'
+        "Content-Type: text/csv\r\n\r\n"
+    ).encode() + HEADER.encode() + b"\n"
+    parts = [head, *(b"x" * 1024 * 1024 for _ in range(chunks)), f"\r\n--{boundary}--\r\n".encode()]
+    raw_headers = [(b"content-type", f"multipart/form-data; boundary={boundary}".encode())]
+    raw_headers += [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+    if declared_length is not None:
+        raw_headers.append((b"content-length", str(declared_length).encode()))
+    scope = {
+        "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST",
+        "scheme": "http", "path": "/api/v1/candidates/import", "raw_path": b"/api/v1/candidates/import",
+        "root_path": "", "query_string": b"", "headers": raw_headers,
+        "server": ("test", 80), "client": ("test", 1),
+    }
+    pulled = 0
+    status = None
+
+    async def receive():
+        nonlocal pulled
+        if pulled < len(parts):
+            pulled += 1
+            return {"type": "http.request", "body": parts[pulled - 1], "more_body": pulled < len(parts)}
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        nonlocal status
+        if message["type"] == "http.response.start":
+            status = message["status"]
+
+    asyncio.run(create_app()(scope, receive, send))
+    return status, pulled
+
+
+@pytest.mark.parametrize("headers", [{"X-Recruiter-Id": "R-999"}, {"X-Recruiter-Id": "R-102"}, {}])
+def test_refused_upload_body_is_never_read(db, headers):
+    status, pulled = asgi_upload(headers, chunks=50, declared_length=50 * 1024 * 1024)
+    assert (status, pulled) == (403, 0)
+
+
+def test_declared_oversized_body_413_before_reading(db):
+    status, pulled = asgi_upload(ADMIN, chunks=50, declared_length=50 * 1024 * 1024)
+    assert (status, pulled) == (413, 0)
+
+
+def test_undeclared_oversized_body_stops_at_cap(db):
+    status, pulled = asgi_upload(ADMIN, chunks=50)
+    assert status == 413
+    assert pulled <= 7  # head + at most ~6 MB, never the whole 50 MB
 
 
 def test_unicode_round_trip(client, db, raw_csv):
