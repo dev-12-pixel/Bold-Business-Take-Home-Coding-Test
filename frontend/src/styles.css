@@ -149,6 +149,13 @@ td.date {
   font-variant-numeric: tabular-nums;
 }
 
+/* Hyphenated values must not break at the hyphen ("2026-07-" / "02"). */
+td.date,
+.region,
+.pill {
+  white-space: nowrap;
+}
+
 .region {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12px;
