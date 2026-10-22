@@ -5,7 +5,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db import app_engine
 from app.main import create_app
-from app.recruiters import Recruiter, RosterError, get_recruiter, load_roster
+from app.recruiters import Recruiter, RosterError, get_recruiter, load_roster, seed_recruiters
 
 HEADER = "recruiter_id,full_name,email,role,assigned_regions\n"
 
@@ -54,6 +54,25 @@ def test_startup_migrates_and_reseeds(db):
         pass
     with app_engine().connect() as conn:
         assert get_recruiter(conn, "R-105").regions == ("US-NE",)
+
+
+def test_reseed_removes_recruiters_no_longer_in_roster(db):
+    with db.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO recruiters VALUES ('R-900', 'Gone Admin', 'g@x.com', true),"
+                " ('R-901', 'Gone Recruiter', 'h@x.com', false)"
+            )
+        )
+        conn.execute(text("INSERT INTO recruiter_regions VALUES ('R-901', 'PH-MNL')"))
+
+    seed_recruiters(db, get_settings().recruiters_csv)
+
+    with app_engine().connect() as conn:
+        assert get_recruiter(conn, "R-900") is None
+        assert get_recruiter(conn, "R-901") is None
+        assert conn.execute(text("SELECT count(*) FROM recruiter_regions WHERE recruiter_id = 'R-901'")).scalar() == 0
+        assert get_recruiter(conn, "R-102").regions == ("US-MW", "US-NE")
 
 
 def test_get_recruiter_from_seeded_db(db):

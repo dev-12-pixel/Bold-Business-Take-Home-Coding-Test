@@ -75,9 +75,15 @@ def load_roster(path: str | Path) -> list[Recruiter]:
 
 
 def seed_recruiters(engine: Engine, path: str | Path) -> None:
-    """Upsert the roster and replace each recruiter's regions, in one transaction."""
+    """Make the DB match the roster file, in one transaction: upsert its recruiters,
+    replace their regions, and delete anyone no longer listed (D30), so a removed
+    recruiter loses access on the next start."""
     entries = _load_entries(path)
     with engine.begin() as conn:
+        conn.execute(
+            text("DELETE FROM recruiters WHERE recruiter_id <> ALL(:ids)"),
+            {"ids": [e.recruiter.recruiter_id for e in entries]},
+        )
         conn.execute(
             text(
                 "INSERT INTO recruiters (recruiter_id, full_name, email, is_admin)"
