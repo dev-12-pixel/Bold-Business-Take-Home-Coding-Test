@@ -1,19 +1,20 @@
 # NOTES
 
-Full decision record with row-level evidence: `CLAUDE.md` (D1–D33). Summary below.
+Full decision record with row-level evidence: `CLAUDE.md` (D1–D34). Summary below.
 
 ## Validation & normalization
 
-A row is valid only if **every** required field passes; the rejection reason lists every
+Codes, IDs, dates and salaries must be plain ASCII, so lookalikes such as `uſ-mw` or Arabic-Indic
+digits are never case-mapped or parsed into a valid value. A row is valid only if **every** required field passes; the rejection reason lists every
 failing field. Rows are numbered like a spreadsheet (header = row 1). I reject with a reason
 rather than guess, and there's no fuzzy matching anywhere.
 
 | Field | Rule | Evidence |
 |---|---|---|
 | email | required; trim + lowercase; syntax check (no DNS); no de-obfuscation | `  Alicia.Trent@Gmail.com ` → normalized (row 33); `[at]` (35), no `@` (36), empty (37) → rejected |
-| region | trim + uppercase, exact match to the 6 codes, or the code with its hyphen removed | `us-mw` (44), ` CO-BOG ` (45), `USW` → `US-W` (46); `ZZ-99` (47), empty (54) → rejected |
+| region | trim, ASCII only, uppercase, exact match to the 6 codes, or the code with its hyphen removed | `us-mw` (44), ` CO-BOG ` (45), `USW` → `US-W` (46); `ZZ-99` (47), empty (54) → rejected |
 | status | enum `active, screening, interviewing, withdrawn, on_hold`; case-insensitive exact match | `ACTIVE` (48), `on hold` → `on_hold` (50); `actve` (49) → rejected |
-| applied_date | required; `YYYY-MM-DD`, `MM/DD/YYYY`, `DD-Mon-YYYY`; must be a real date | `06/30/2026` (40), `14-May-2026` (41); `2026-02-30` (42), empty (43) → rejected |
+| applied_date | required; `YYYY-MM-DD`, `MM/DD/YYYY`, `DD-Mon-YYYY`; real date from 2000 to next year. A slash date that reads differently as MM/DD and DD/MM (`05/06/2026`) is **rejected as ambiguous**: the Bogotá and Manila sources may write day first, and I won't guess | `06/30/2026` (40), `14-May-2026` (41); `2026-02-30` (42), empty (43) → rejected |
 | salary | `$`, `,` and `k` understood; must be a whole number from 0 to 2,147,483,647, else **null + warning** (never rejects a row on its own) | `$95,000`, `97,500`, `85k` (48); `negotiable` → null |
 | names | required, NFC; Unicode letters/marks, space, `'` `’` `-` `.` only | `Nguyễn Thị Hoa` kept; `O'Connor'); DROP TABLE…` (38) → rejected |
 | free text | phone/role/source/notes stored verbatim (newlines kept) | `' OR '1'='1` (39) stored literally |

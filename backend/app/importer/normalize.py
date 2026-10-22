@@ -19,12 +19,17 @@ MAX_SALARY = 2_147_483_647  # Postgres integer column
 # maps to exactly one canonical code, so this is a lookup, not a fuzzy match.
 _REGIONS_WITHOUT_HYPHEN = {code.replace("-", ""): code for code in REGIONS}
 
-# Tried in order; %b is the C-locale English month abbreviation (D10).
-_DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%d-%b-%Y")
+# Exact ASCII shapes (D10); strptime alone would accept "2026-1-5" and non-ASCII digits.
+_ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+_SLASH_DATE = re.compile(r"(?P<first>[0-9]{1,2})/(?P<second>[0-9]{1,2})/[0-9]{4}")
+_MONTH_DATE = re.compile(r"[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4}")  # %b: C-locale English abbrev
+MIN_APPLIED_DATE = date(2000, 1, 1)
 
-_CANDIDATE_ID = re.compile(r"C-\d{4}")
+_CANDIDATE_ID = re.compile(r"C-[0-9]{4}")
 _NAME_PUNCTUATION = frozenset(" '’-.")
-_SALARY = re.compile(r"\$?(?P<number>\d{1,3}(?:,\d{3})+|\d+)(?P<fraction>\.\d+)?(?P<k>[kK])?")
+_SALARY = re.compile(
+    r"\$?(?P<number>[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?P<fraction>\.[0-9]+)?(?P<k>[kK])?"
+)
 
 
 def _required(raw: str) -> str:
@@ -60,7 +65,9 @@ def normalize_email(raw: str) -> str:
 
 
 def normalize_region(raw: str) -> str:
-    value = _required(raw).upper()
+    value = _required(raw)
+    # ASCII first: .upper() maps lookalikes such as "ſ" (long s) onto "S".
+    value = value.upper() if value.isascii() else value
     if value in REGIONS:
         return value
     if "-" not in value and value in _REGIONS_WITHOUT_HYPHEN:
@@ -75,14 +82,33 @@ def normalize_status(raw: str) -> str:
     return value
 
 
+def _date_format(value: str) -> str | None:
+    """The one strptime format whose exact shape `value` has (D10), else None."""
+    if _ISO_DATE.fullmatch(value):
+        return "%Y-%m-%d"
+    if slash := _SLASH_DATE.fullmatch(value):
+        first, second = int(slash["first"]), int(slash["second"])
+        if first <= 12 and second <= 12 and first != second:
+            raise ValueError(f"ambiguous date '{value}' (MM/DD or DD/MM); use YYYY-MM-DD")
+        return "%m/%d/%Y"
+    if _MONTH_DATE.fullmatch(value):
+        return "%d-%b-%Y"
+    return None
+
+
 def parse_date(raw: str) -> date:
     value = _required(raw)
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(value, fmt).date()
-        except ValueError:
-            continue
-    raise ValueError(f"not a valid date '{value}'")
+    fmt = _date_format(value)
+    try:
+        parsed = datetime.strptime(value, fmt).date() if fmt else None
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise ValueError(f"not a valid date '{value}'")
+    latest = date(date.today().year + 1, 12, 31)
+    if not MIN_APPLIED_DATE <= parsed <= latest:
+        raise ValueError(f"date '{value}' outside {MIN_APPLIED_DATE} to {latest}")
+    return parsed
 
 
 def parse_salary(raw: str) -> tuple[int | None, str | None]:

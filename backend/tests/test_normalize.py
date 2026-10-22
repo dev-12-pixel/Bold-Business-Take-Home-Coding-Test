@@ -4,6 +4,8 @@ from datetime import date
 
 import pytest
 
+MAX_DATE = f"{date.today().year + 1}-12-31"
+
 from app.importer.normalize import (
     REGIONS,
     STATUSES,
@@ -70,6 +72,8 @@ def test_region_normalized(raw, expected):
         ("US_W", "unknown region 'US_W'"),
         ("US-WEST", "unknown region 'US-WEST'"),
         ("", "required"),
+        ("u\u017f-mw", "unknown region 'u\u017f-mw'"),  # long s upper-cases to S
+        ("\uff35\uff33-\uff37", "unknown region '\uff35\uff33-\uff37'"),  # fullwidth
     ],
 )
 def test_region_rejected(raw, message):
@@ -94,7 +98,11 @@ def test_status_normalized(raw, expected):
 
 @pytest.mark.parametrize(
     "raw, message",
-    [("actve", "unknown status 'actve'"), ("", "required")],
+    [
+        ("actve", "unknown status 'actve'"),
+        ("", "required"),
+        ("\u0430ctive", "unknown status '\u0430ctive'"),  # Cyrillic a
+    ],
 )
 def test_status_rejected(raw, message):
     with pytest.raises(ValueError) as exc:
@@ -109,6 +117,9 @@ def test_status_rejected(raw, message):
         ("06/30/2026", date(2026, 6, 30)),
         ("14-May-2026", date(2026, 5, 14)),
         ("14-MAY-2026", date(2026, 5, 14)),
+        ("05/05/2026", date(2026, 5, 5)),  # both readings agree
+        ("6/30/2026", date(2026, 6, 30)),
+        ("4-Jul-2026", date(2026, 7, 4)),
     ],
 )
 def test_date_parsed(raw, expected):
@@ -122,6 +133,17 @@ def test_date_parsed(raw, expected):
         ("30/06/2026", "not a valid date '30/06/2026'"),
         ("May 14 2026", "not a valid date 'May 14 2026'"),
         ("", "required"),
+        # D10: a slash date that reads differently as MM/DD and DD/MM is a guess.
+        ("05/06/2026", "ambiguous date '05/06/2026' (MM/DD or DD/MM); use YYYY-MM-DD"),
+        ("12/01/2026", "ambiguous date '12/01/2026' (MM/DD or DD/MM); use YYYY-MM-DD"),
+        # Shapes are exact and ASCII-only.
+        ("2026-1-5", "not a valid date '2026-1-5'"),
+        ("\u0662\u0660\u0662\u0666-01-05", "not a valid date '\u0662\u0660\u0662\u0666-01-05'"),
+        ("2026-05-14T00:00", "not a valid date '2026-05-14T00:00'"),
+        # Plausible range for an application date.
+        ("0001-01-01", "date '0001-01-01' outside 2000-01-01 to " + MAX_DATE),
+        ("1999-12-31", "date '1999-12-31' outside 2000-01-01 to " + MAX_DATE),
+        (f"{date.today().year + 2}-01-01", f"date '{date.today().year + 2}-01-01' outside 2000-01-01 to " + MAX_DATE),
     ],
 )
 def test_date_rejected(raw, message):
@@ -145,7 +167,9 @@ def test_salary_parsed(raw, expected):
     assert parse_salary(raw) == expected
 
 
-@pytest.mark.parametrize("raw", ["negotiable", "-5", "1,2,3", "85.5", "$"])
+@pytest.mark.parametrize(
+    "raw", ["negotiable", "-5", "1,2,3", "85.5", "$", "\u0669\u0660\u0660\u0660\u0660", "\uff19\uff10k"]
+)
 def test_salary_unparseable_is_null_with_warning(raw):
     assert parse_salary(raw) == (None, f"salary '{raw}' is not numeric; stored as null")
 
@@ -185,6 +209,9 @@ def test_candidate_id():
         normalize_candidate_id("1001")
     with pytest.raises(ValueError, match="^required$"):
         normalize_candidate_id("")
+    for non_ascii in ("C-\u0661\u0662\u0663\u0664", "C-\uff11\uff10\uff10\uff11"):
+        with pytest.raises(ValueError, match="^must match C-####"):
+            normalize_candidate_id(non_ascii)
 
 
 def test_clean_optional_keeps_text_verbatim():
