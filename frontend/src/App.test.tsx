@@ -4,8 +4,18 @@ import App from "./App";
 
 const recruiters = [
   { recruiter_id: "R-101", full_name: "Dana Whitmore", is_admin: true, regions: [] },
-  { recruiter_id: "R-102", full_name: "Caleb Nguyen", is_admin: false, regions: ["US-MW", "US-NE"] },
-  { recruiter_id: "R-103", full_name: "Marisol Vega", is_admin: false, regions: ["CO-BOG", "PH-MNL"] },
+  {
+    recruiter_id: "R-102",
+    full_name: "Caleb Nguyen",
+    is_admin: false,
+    regions: ["US-MW", "US-NE"],
+  },
+  {
+    recruiter_id: "R-103",
+    full_name: "Marisol Vega",
+    is_admin: false,
+    regions: ["CO-BOG", "PH-MNL"],
+  },
 ];
 
 const candidate = (id: string, first: string, last: string, region: string) => ({
@@ -30,7 +40,8 @@ beforeEach(() => {
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url === "/api/v1/recruiters") return Response.json(recruiters);
     const id = new Headers(init?.headers).get("X-Recruiter-Id") ?? "";
-    if (!(id in byRecruiter)) return Response.json({ detail: "unknown recruiter" }, { status: 403 });
+    if (!(id in byRecruiter))
+      return Response.json({ detail: "unknown recruiter" }, { status: 403 });
     const items = byRecruiter[id];
     return Response.json({ items, total: items.length, page: 1, page_size: 25 });
   });
@@ -81,6 +92,9 @@ describe("recruiter view", () => {
 
     fireEvent.change(screen.getByLabelText("Recruiter"), { target: { value: "R-101" } });
 
-    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "403: unknown recruiter");
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "403: unknown recruiter",
+    );
   });
 });
